@@ -1,2 +1,42 @@
-<h1>Weather#index</h1>
-<p>Find me in app/views/weather/index.html.erb</p>
+<h1>Weather Forecast</h1>
+<p>Enter your address:</p>
+<%= form_tag(weather_path, method: "get") do %>
+  <div>
+    <%= label_tag(:address_line_1, "Address Line 1") %>
+    <%= text_field_tag(:address_line_1, '', required: true) %>
+  </div>
+  <div>
+    <%= label_tag(:city, "City") %>
+    <%= text_field_tag(:city, '', required: true) %>
+  </div>
+  <div>
+    <%= label_tag(:state, "State") %>
+    <%= text_field_tag(:state, '', required: true) %>
+  </div>
+  <div>
+    <%= label_tag(:zip_code, "Zip Code") %>
+    <%= text_field_tag(:zip_code, '', required: true) %>
+  </div>
+  <div>
+    <%= label_tag(:country, "Country") %>
+    <%= text_field_tag(:country, '', required: true) %>
+  </div>
+  <div>
+    <%= submit_tag("Search") %>
+  </div>
+<% end %>
+
+<% if @weather_forecast_details.present? %>
+  <div test_id="weather_forecast_details">
+    <% if @from_cache %>
+      <p>This data was retrieved from the cache.</p>
+    <% end %>
+    <p>Current: <%= @weather_forecast_details[:current] %></p>
+    <p>High: <%= @weather_forecast_details[:high] %></p>
+    <p>Low: <%= @weather_forecast_details[:low] %></p>
+  </div>
+<% end %>
+
+<% if @error_message.present? %>
+  <p>There was an error retrieving the weather forecast details: <%= @error_message %></p>
+<% end %>
