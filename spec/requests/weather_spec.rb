@@ -24,26 +24,6 @@ RSpec.describe "Weather", type: :request do
         }
       )
     end
-    let(:expected_current_temperature) { "Current: 53.62F" }
-    let(:expected_forecasts) do
-      [
-        "04/08 High: 72.88F Low: 53.62F",
-        "04/09 High: 75.25F Low: 59.99F",
-        "04/10 High: 73.38F Low: 60.62F",
-        "04/11 High: 64.18F Low: 56.44F",
-        "04/12 High: 56.44F Low: 51.85F",
-        "04/13 High: 60.13F Low: 51.3F",
-        "04/14 High: 70.97F Low: 53.53F",
-        "04/15 High: 74.19F Low: 59.34F"
-      ]
-    end
-
-    before do
-      allow(Geocoder)
-        .to receive(:search)
-        .and_return(geocoder_response)
-      allow(HTTParty).to receive(:get).and_return(open_weather_api_response)
-    end
 
     shared_examples "a page with an address form" do
       let(:address_form) do
@@ -136,9 +116,14 @@ RSpec.describe "Weather", type: :request do
       end
     end
 
-    shared_examples "a request that caches weather forecast details" do
-      it "caches the weather forecast details for the given zipcode for 30 minutes" do
-        pending "needs to be implemented"
+    shared_examples "a request that writes weather forecast details to the cache" do
+      it "caches the weather forecast details for the given zipcode with a 30 minute expiration" do
+        expect(Rails.cache).to receive(:write).with(
+          expected_zip_code,
+          expected_forecast_data,
+          expires_in: 30.minutes
+        )
+        subject
       end
     end
 
@@ -153,6 +138,7 @@ RSpec.describe "Weather", type: :request do
         }
       end
       let(:expected_address) { "123 Main St, Santa Ana, CA 92701, US" }
+      let(:expected_zip_code) { "92701" }
       let(:expected_url) { "https://api.openweathermap.org/data/3.0/onecall" }
       let(:expected_query) do
         {
@@ -169,16 +155,47 @@ RSpec.describe "Weather", type: :request do
           .to receive(:search)
           .with(expected_address)
           .and_return(geocoder_response)
-        allow(HTTParty).to receive(:get) do |url, args|
-          expect(url).to eq(expected_url)
-          expect(args[:query]).to include(expected_query)
-        end.and_return(open_weather_api_response)
+        allow(HTTParty)
+          .to receive(:get)
+          .with(expected_url, query: expected_query)
+          .and_return(open_weather_api_response)
       end
 
       context "when the weather forecast data is cached for the given zip code" do
+        let(:cached_forecast_data) do
+          {
+            current: "43.62F",
+            forecasts: [
+              { date: "05/15", high: "62.88F", low: "43.62F" },
+              { date: "05/16", high: "65.25F", low: "49.99F" },
+              { date: "05/17", high: "63.38F", low: "50.62F" },
+              { date: "05/18", high: "54.18F", low: "46.44F" },
+              { date: "05/19", high: "46.44F", low: "41.85F" },
+              { date: "05/20", high: "50.13F", low: "41.3F" },
+              { date: "05/21", high: "60.97F", low: "43.53F" },
+              { date: "05/22", high: "64.19F", low: "49.34F" }
+            ]
+          }
+        end
+        let(:expected_current_temperature) { "Current: 43.62F" }
+        let(:expected_forecasts) do
+          [
+            "05/15 High: 62.88F Low: 43.62F",
+            "05/16 High: 65.25F Low: 49.99F",
+            "05/17 High: 63.38F Low: 50.62F",
+            "05/18 High: 54.18F Low: 46.44F",
+            "05/19 High: 46.44F Low: 41.85F",
+            "05/20 High: 50.13F Low: 41.3F",
+            "05/21 High: 60.97F Low: 43.53F",
+            "05/22 High: 64.19F Low: 49.34F"
+          ]
+        end
+
         before do
-          expect(Geocoder).not_to receive(:search)
-          expect(HTTParty).not_to receive(:get)
+          allow(Rails.cache)
+            .to receive(:read)
+            .with(expected_zip_code)
+            .and_return(cached_forecast_data)
         end
 
         it_behaves_like "a page with an address form"
@@ -186,10 +203,46 @@ RSpec.describe "Weather", type: :request do
       end
 
       context "when the weather forecast data is not cached for the given zip code" do
+        let(:expected_forecast_data) do
+          {
+            current: "53.62F",
+            forecasts: [
+              { date: "04/08", high: "72.88F", low: "53.62F" },
+              { date: "04/09", high: "75.25F", low: "59.99F" },
+              { date: "04/10", high: "73.38F", low: "60.62F" },
+              { date: "04/11", high: "64.18F", low: "56.44F" },
+              { date: "04/12", high: "56.44F", low: "51.85F" },
+              { date: "04/13", high: "60.13F", low: "51.3F" },
+              { date: "04/14", high: "70.97F", low: "53.53F" },
+              { date: "04/15", high: "74.19F", low: "59.34F" }
+            ]
+          }
+        end
+        let(:expected_current_temperature) { "Current: 53.62F" }
+        let(:expected_forecasts) do
+          [
+            "04/08 High: 72.88F Low: 53.62F",
+            "04/09 High: 75.25F Low: 59.99F",
+            "04/10 High: 73.38F Low: 60.62F",
+            "04/11 High: 64.18F Low: 56.44F",
+            "04/12 High: 56.44F Low: 51.85F",
+            "04/13 High: 60.13F Low: 51.3F",
+            "04/14 High: 70.97F Low: 53.53F",
+            "04/15 High: 74.19F Low: 59.34F"
+          ]
+        end
+
+        before do
+          allow(Rails.cache)
+            .to receive(:read)
+            .with(expected_zip_code)
+            .and_return(nil)
+        end
+
         context "when the weather forecast data is retrieved successfully" do
           it_behaves_like "a page with an address form"
           it_behaves_like "a page with weather forecast details"
-          it_behaves_like "a request that caches weather forecast details"
+          it_behaves_like "a request that writes weather forecast details to the cache"
         end
 
         context "when there is an error retrieving the weather forecast data" do
