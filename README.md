@@ -2,9 +2,11 @@
 
 ## Summary
 This application consists of a single page which displays the current temperature and weather forecast for a given address if it exists.
+
 ![img.png](img.png)
 
 Subsequent requests for addresses in the same zip code will return the cached result from the first request for 30 minutes. The page indicates whether the results came from the cache or not.
+
 ![img_1.png](img_1.png)
 
 ## Prerequisites
