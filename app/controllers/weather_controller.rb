@@ -2,17 +2,38 @@ require 'httparty'
 
 class WeatherController < ApplicationController
   def index
-    get_weather_forecast_details
+    populate_weather_forecast_details
   rescue => e
     @error_message = e.message
   end
 
   private
 
-  def get_weather_forecast_details
+  def populate_weather_forecast_details
     return @weather_forecast_details if defined?(@weather_forecast_details)
     return @weather_forecast_details = {} unless address.present?
+    if (@weather_forecast_details = Rails.cache.read(params[:zip_code]))
+      @from_cache = true
+      return @weather_forecast_details
+    end
 
+    parsed_response = query_open_weather_api
+
+    @weather_forecast_details = {
+      current: "#{parsed_response["current"]["temp"]}F",
+      forecasts: parsed_response["daily"].map do |forecast|
+        {
+          date: Time.at(forecast["dt"]).strftime('%m/%d'),
+          high: "#{forecast["temp"]["max"]}F",
+          low: "#{forecast["temp"]["min"]}F"
+        }
+      end
+    }
+
+    Rails.cache.write(params[:zip_code], @weather_forecast_details, expires_in: 30.minutes)
+  end
+
+  def query_open_weather_api
     weather_forecast_url = "https://api.openweathermap.org/data/3.0/onecall"
 
     query = {
@@ -27,16 +48,7 @@ class WeatherController < ApplicationController
 
     raise response.parsed_response["message"] if response.code != 200
 
-    @weather_forecast_details = {
-      current: "#{response.parsed_response["current"]["temp"]}F",
-      forecasts: response.parsed_response["daily"].map do |forecast|
-        {
-          date: Time.at(forecast["dt"]).strftime('%m/%d'),
-          high: "#{forecast["temp"]["max"]}F",
-          low: "#{forecast["temp"]["min"]}F"
-        }
-      end
-    }
+    response.parsed_response
   end
 
   def address

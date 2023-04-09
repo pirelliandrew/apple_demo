@@ -24,12 +24,11 @@ RSpec.describe "Weather", type: :request do
         }
       )
     end
+    let(:address_form) do
+      parsed_html_body.css('form[action="/weather"][accept-charset="UTF-8"][method="get"]')
+    end
 
     shared_examples "a page with an address form" do
-      let(:address_form) do
-        parsed_html_body.css('form[action="/weather"][accept-charset="UTF-8"][method="get"]')
-      end
-
       it "has the address form" do
         subject
         expect(address_form).to be_present
@@ -76,10 +75,6 @@ RSpec.describe "Weather", type: :request do
     end
 
     shared_examples "a page with weather forecast details" do
-      let(:weather_forecast_details_section) do
-        parsed_html_body.css('div[test_id="weather_forecast_details"]')
-      end
-
       it "has the weather forecast details section" do
         subject
         expect(weather_forecast_details_section).to be_present
@@ -101,8 +96,6 @@ RSpec.describe "Weather", type: :request do
     end
 
     shared_examples "a page with an error message" do
-      let(:error_message_section) { parsed_html_body.css('div[test_id="error_message"]') }
-
       it "has the error message section" do
         subject
         expect(error_message_section).to be_present
@@ -127,6 +120,14 @@ RSpec.describe "Weather", type: :request do
       end
     end
 
+    shared_examples "a page displaying weather forecast details from the cache" do
+      it "displays an indicator stating that the data was retrieved from the cache" do
+        subject
+        expect(weather_forecast_details_section.text)
+          .to include("This data was retrieved from the cache.")
+      end
+    end
+
     context "when an address is specified in the params" do
       let(:params) do
         {
@@ -148,6 +149,9 @@ RSpec.describe "Weather", type: :request do
           units: "imperial",
           appid: "a53cfe4549bc0249d5df478de84f0f10"
         }
+      end
+      let(:weather_forecast_details_section) do
+        parsed_html_body.css('div[test_id="weather_forecast_details"]')
       end
 
       before do
@@ -200,6 +204,7 @@ RSpec.describe "Weather", type: :request do
 
         it_behaves_like "a page with an address form"
         it_behaves_like "a page with weather forecast details"
+        it_behaves_like "a page displaying weather forecast details from the cache"
       end
 
       context "when the weather forecast data is not cached for the given zip code" do
@@ -259,6 +264,7 @@ RSpec.describe "Weather", type: :request do
             "There was an error retrieving the weather forecast details: "\
             "The weather forecast data could not be found for the specified coordinates."
           end
+          let(:error_message_section) { parsed_html_body.css('div[test_id="error_message"]') }
 
           before do
             allow(HTTParty).to receive(:get) do |url, args|
