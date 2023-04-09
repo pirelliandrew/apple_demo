@@ -65,6 +65,8 @@ class WeatherController < ApplicationController
 
     results = Geocoder.search(address)
 
+    raise "The given address does not exist." unless results.first.present?
+
     @address_coordinates = {
       latitude: results.first.coordinates[0],
       longitude: results.first.coordinates[1]

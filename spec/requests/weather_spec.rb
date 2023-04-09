@@ -236,6 +236,7 @@ RSpec.describe "Weather", type: :request do
             "04/15 High: 74.19F Low: 59.34F"
           ]
         end
+        let(:error_message_section) { parsed_html_body.css('div[test_id="error_message"]') }
 
         before do
           allow(Rails.cache)
@@ -248,6 +249,17 @@ RSpec.describe "Weather", type: :request do
           it_behaves_like "a page with an address form"
           it_behaves_like "a page with weather forecast details"
           it_behaves_like "a request that writes weather forecast details to the cache"
+        end
+
+        context "when the provided address does not exist" do
+          let(:geocoder_response) { [] }
+          let(:expected_error_message) do
+            "There was an error retrieving the weather forecast details: "\
+            "The given address does not exist."
+          end
+
+          it_behaves_like "a page with an address form"
+          it_behaves_like "a page with an error message"
         end
 
         context "when there is an error retrieving the weather forecast data" do
@@ -264,7 +276,6 @@ RSpec.describe "Weather", type: :request do
             "There was an error retrieving the weather forecast details: "\
             "The weather forecast data could not be found for the specified coordinates."
           end
-          let(:error_message_section) { parsed_html_body.css('div[test_id="error_message"]') }
 
           before do
             allow(HTTParty).to receive(:get) do |url, args|
