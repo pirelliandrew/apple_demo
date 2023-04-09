@@ -32,11 +32,14 @@
       <p>This data was retrieved from the cache.</p>
     <% end %>
     <p>Current: <%= @weather_forecast_details[:current] %></p>
-    <p>High: <%= @weather_forecast_details[:high] %></p>
-    <p>Low: <%= @weather_forecast_details[:low] %></p>
+    <% @weather_forecast_details[:forecasts].each do |forecast| %>
+      <p><%= forecast[:date] %> High: <%= forecast[:high] %> Low: <%= forecast[:low] %></p>
+    <% end %>
   </div>
 <% end %>
 
 <% if @error_message.present? %>
-  <p>There was an error retrieving the weather forecast details: <%= @error_message %></p>
+  <div test_id="error_message">
+    <p>There was an error retrieving the weather forecast details: <%= @error_message %></p>
+  </div>
 <% end %>
